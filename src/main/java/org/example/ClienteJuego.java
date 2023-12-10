@@ -1,36 +1,25 @@
 package org.example;
-
 import java.io.*;
-import java.net.Socket;
+import java.net.*;
 
 public class ClienteJuego {
-
     public static void main(String[] args) {
         try {
-            // Conectar al servidor
             Socket socket = new Socket("localhost", 666);
-
-            // Configurar flujos de entrada/salida para el cliente
             DataOutputStream outToServidor = new DataOutputStream(socket.getOutputStream());
             DataInputStream inFromServidor = new DataInputStream(socket.getInputStream());
 
-            // Recibir el mensaje inicial del servidor
             String mensajeInicial = inFromServidor.readUTF();
             System.out.println(mensajeInicial);
 
-            // Si este cliente es cliente1, recibir la palabra secreta del servidor
             if (mensajeInicial.contains("cliente1")) {
                 String palabra = inFromServidor.readUTF();
                 System.out.println("Palabra secreta recibida del servidor: " + palabra);
-
-                // Comunicarse con el servidor
-                new Thread(() -> hacerPreguntas(outToServidor, true)).start();
+                new Thread(() -> hacerPreguntas(outToServidor, mensajeInicial, palabra)).start();
             } else {
-                // Comunicarse con el servidor
-                new Thread(() -> hacerPreguntas(outToServidor, false)).start();
+                new Thread(() -> hacerPreguntas(outToServidor, mensajeInicial, "")).start();
             }
 
-            // Se crea un nuevo hilo para recibir y mostrar las respuestas del ClienteJuego que responde (clientepregunta)
             new Thread(() -> recibirRespuestas(inFromServidor)).start();
 
         } catch (IOException e) {
@@ -38,20 +27,35 @@ public class ClienteJuego {
         }
     }
 
-    private static void hacerPreguntas(DataOutputStream outToServidor, boolean esCliente1) {
+    private static void hacerPreguntas(DataOutputStream outToServidor, String mensajeInicial, String palabra) {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
             while (true) {
-                // Leer la pregunta desde la consola
-                String indicacion = esCliente1 ? "Tu pregunta o escribe 'adivinar' para adivinar la palabra: " : "";
-                System.out.print(indicacion);
-                String pregunta = reader.readLine();
+                if (mensajeInicial.contains("LA PALABRA SELECCIONADA ES:")) {
+                    String respuestaPregunta;
+                    do {
+                        System.out.println("Responde con si o no: ");
+                        respuestaPregunta = reader.readLine().toLowerCase();
+                        if (!respuestaPregunta.equals("si") && !respuestaPregunta.equals("no")) {
+                            System.out.println("Respuesta errónea.");
+                        }
+                    } while (!respuestaPregunta.equals("si") && !respuestaPregunta.equals("no"));
 
-                // Enviar la pregunta al servidor
-                outToServidor.writeUTF(pregunta);
+                    outToServidor.writeUTF(respuestaPregunta);
+                } else {
+                    System.out.println("Haz una pregunta o escribe 'adivinar' para resolver:");
+                    String mensaje = reader.readLine();
+                    outToServidor.writeUTF(mensaje);
 
-                // Añadir una pausa breve para permitir que las operaciones de E/S se completen
+                    if (mensaje.equalsIgnoreCase("adivinar")) {
+                        System.out.print("Resuelve: ");
+                        String palabraAdivinada = reader.readLine();
+                        outToServidor.writeUTF(palabraAdivinada);
+                        Thread.sleep(110);
+                    }
+                }
+
                 Thread.sleep(110);
             }
 
@@ -63,15 +67,19 @@ public class ClienteJuego {
     private static void recibirRespuestas(DataInputStream inFromServidor) {
         try {
             while (true) {
-                // Recibir y mostrar la respuesta del ClienteJuego que responde (clientepregunta)
-                String respuesta = inFromServidor.readUTF();
-                System.out.println("Respuesta de ClienteRespuesta: " + respuesta);
-
-                // Añadir una pausa breve para permitir que las operaciones de E/S se completen
-                Thread.sleep(110);
+                try {
+                    String respuesta = inFromServidor.readUTF();
+                    System.out.println(respuesta);
+                    Thread.sleep(110);
+                } catch (EOFException e) {
+                    // Se alcanzó el final del flujo de entrada, salimos del bucle
+                    System.out.println("El servidor ha cerrado la conexión.");
+                    break;
+                }
             }
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
+
 }

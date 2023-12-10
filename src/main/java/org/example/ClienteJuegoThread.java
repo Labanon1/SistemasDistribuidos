@@ -1,33 +1,44 @@
 package org.example;
+
 import java.io.*;
 import java.net.Socket;
 
 public class ClienteJuegoThread implements Runnable {
     private Socket clienteEnvia;
     private Socket clienteRecibe;
+    private String palabraAdivinar;
 
-    public ClienteJuegoThread(Socket clienteEnvia, Socket clienteRecibe) {
+    public ClienteJuegoThread(Socket clienteEnvia, Socket clienteRecibe, String palabraAdivinar) {
         this.clienteEnvia = clienteEnvia;
         this.clienteRecibe = clienteRecibe;
+        this.palabraAdivinar = palabraAdivinar;
     }
 
     @Override
     public void run() {
         try {
-// Se crean los flujos de entrada y salida para comunicarse con los clientes
             DataInputStream inFromClienteEnvia = new DataInputStream(clienteEnvia.getInputStream());
+            DataOutputStream outToClienteEnvia = new DataOutputStream(clienteEnvia.getOutputStream());
             DataOutputStream outToClienteRecibe = new DataOutputStream(clienteRecibe.getOutputStream());
 
-// El hilo se ejecutará continuamente, manejando la comunicación entre los clientes
             while (true) {
-// Recibir y mostrar la pregunta del ClienteJuego que hace preguntas
-                String pregunta = inFromClienteEnvia.readUTF();
-                System.out.println("Pregunta de ClientePregunta: " + pregunta);
+                String respuesta = inFromClienteEnvia.readUTF();
 
-                // Enviar la pregunta al ClienteJuego que responde (clienteRecibe)
-                outToClienteRecibe.writeUTF(pregunta);
+                if (respuesta.equalsIgnoreCase("adivinar")) {
+                    String palabraClientePregunta = inFromClienteEnvia.readUTF();
 
-                // Añadir una pausa breve para permitir que las operaciones de E/S se completen
+                    if (palabraClientePregunta.equalsIgnoreCase(palabraAdivinar)) {
+                        outToClienteEnvia.writeUTF("FELICIDADES, HAS ACERTADO");
+                        Thread.sleep(110);
+                        // Sale del bucle y termina el programa
+                        System.exit(0);
+                    } else {
+                        outToClienteEnvia.writeUTF("Has fallado. Puedes hacer más preguntas o intentar adivinar de nuevo.");
+                    }
+                } else {
+                    outToClienteRecibe.writeUTF( respuesta);
+                }
+
                 Thread.sleep(110);
             }
         } catch (IOException | InterruptedException e) {
@@ -35,3 +46,4 @@ public class ClienteJuegoThread implements Runnable {
         }
     }
 }
+
