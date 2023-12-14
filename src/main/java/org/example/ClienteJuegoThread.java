@@ -31,7 +31,9 @@ public class ClienteJuegoThread implements Runnable {
                         outToClienteEnvia.writeUTF("FELICIDADES, HAS ACERTADO");
                         Thread.sleep(110);
                         // Sale del bucle y termina el programa
-                        System.exit(0);
+                        clienteRecibe.close();
+                        clienteEnvia.close();
+                        break;
                     } else {
                         outToClienteEnvia.writeUTF("Has fallado. Puedes hacer más preguntas o intentar adivinar de nuevo.");
                     }

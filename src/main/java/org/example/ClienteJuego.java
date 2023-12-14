@@ -76,6 +76,10 @@ public class ClienteJuego {
                     System.out.println("El servidor ha cerrado la conexión.");
                     break;
                 }
+                catch (SocketException e) {
+                    System.out.println("Se ha cerrado la conexión.");
+                    break;
+                }
             }
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
